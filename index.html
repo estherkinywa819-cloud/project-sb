@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>University Suggestion Box</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+    University Automated Suggestion Box
+    <button id="backBtn" class="hidden" onclick="headerBack()" style="position: absolute; right: 140px; top: 50%; transform: translateY(-50%); font-size: 13px; padding: 6px 12px; background-color: #1e40af; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">← Back</button>
+    <button id="logoutBtn" class="hidden" onclick="logout()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 13px; padding: 6px 12px; background-color: #06b6d4; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">Exit Role →</button>
+</header>
+
+<div id="landingPage" class="landing-container">
+    <div class="card" style="text-align: center; max-width: 600px; margin: 80px auto;">
+        <h2 style="margin-top: 0;">Welcome to University Suggestion Box</h2>
+        <p style="margin-bottom: 30px;">Select your role to continue:</p>
+        <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+            <button class="role-btn student-btn" onclick="selectRole('student')" style="flex: 1; min-width: 120px;">Student</button>
+            <button class="role-btn staff-btn" onclick="selectRole('staff')" style="flex: 1; min-width: 120px;">Staff</button>
+            <button class="role-btn admin-btn" onclick="selectRole('admin')" style="flex: 1; min-width: 120px;">Admin</button>
+        </div>
+    </div>
+</div>
+
+<div id="loginPage" class="landing-container hidden">
+    <div class="card" style="max-width: 350px; margin: 100px auto;">
+        <h2 style="text-align: center; margin-top: 0;" id="loginTitle">Admin Verification</h2>
+        <label>Username</label>
+        <input type="text" id="loginUser" placeholder="Enter username">
+        <label>Password</label>
+        <div style="position: relative; margin-top: 5px;">
+            <input type="password" id="loginPass" placeholder="Enter password" style="margin-top: 0; padding-right: 40px; box-sizing: border-box;">
+            <button type="button" onclick="togglePassword()" style="position: absolute; right: 10px; top: 10px; background: none; border: none; cursor: pointer; font-size: 16px; padding: 0;">👁</button>
+        </div>
+        <div id="loginError" class="hidden" style="color: #ef4444; font-size: 14px; margin-top: 15px; text-align: center; font-weight: bold;">Invalid credentials! Please try again.</div>
+        <br>
+        <button id="loginBtn" class="primary" style="width: 100%;" onclick="attemptLogin()">Login</button>
+        <button style="width: 100%; margin-top: 10px; padding: 10px; background: none; border: 1px solid #ccc; cursor: pointer; border-radius: 6px;" onclick="backToLanding()">Back</button>
+    </div>
+</div>
+
+<div id="appContainer" class="hidden">
+<nav>
+    <button id="nav-submit" class="nav-btn active" onclick="showTab('submit', this)">Submit</button>
+    <button id="nav-board" class="nav-btn" onclick="showTab('board', this)">Board</button>
+    <button id="nav-admin" class="nav-btn" onclick="showTab('admin', this)">Admin View<span id="adminBadge" class="notification-badge" style="display:none;">0</span></button>
+    <span style="flex: 1;"></span>
+    <span id="currentRoleDisplay" style="color: white; padding: 14px 20px; font-weight: bold;"></span>
+</nav>
+
+<div class="container">
+
+<!-- SUBMIT TAB -->
+<div id="submit" class="tab">
+
+<div class="card">
+
+<h3>Submit Suggestion / Grievance</h3>
+
+<label>Name (Optional)</label>
+<input type="text" id="name" placeholder="Enter your name (leave blank to remain anonymous)">
+
+<label>Category</label>
+<select id="category">
+<option value="" disabled selected>Select Category</option>
+<option value="Finance">Finance</option>
+<option value="Security">Security</option>
+<option value="Academic Affairs">Academic Affairs</option>
+<option value="Hostel">Hostel</option>
+<option value="IT Services">IT Services</option>
+<option value="Others">Others</option>
+</select>
+
+<label>Description</label>
+<textarea id="description" placeholder="Describe your issue here..."></textarea>
+
+<label>Attach Files (Optional)</label>
+<div style="border: 2px dashed #60a5fa; border-radius: 6px; padding: 15px; text-align: center; background-color: rgba(96, 165, 250, 0.05); cursor: pointer;" onclick="document.getElementById('fileInput').click()" id="dropZone">
+    <input type="file" id="fileInput" multiple style="display: none;" onchange="handleFileSelect(event, 'submit')">
+    <p style="margin: 0; color: #0284c7; font-weight: 500;">📁 Click to select files or drag and drop</p>
+    <small style="color: #64748b;">Supports images, documents (Max 5MB each)</small>
+</div>
+<div id="fileListSubmit" style="margin-top: 10px;"></div>
+
+<div class="options">
+<label>
+<input type="checkbox" id="private"> Send Only To Admin
+</label>
+</div>
+
+<button class="primary" onclick="submitPost()">Submit</button>
+
+<div id="confirmationMessage" class="hidden" style="margin-top: 15px; padding: 10px; background-color: #d1fae5; border-left: 4px solid #10b981; border-radius: 4px;">
+    <strong>Success!</strong> Your suggestion has been submitted. <br>
+    Tracking ID: <span id="trackingId"></span><br>
+    <small>Use this ID to track how many people viewed your post.</small>
+</div>
+
+</div>
+
+<div class="card" style="margin-top: 25px;">
+    <h3>Manage My Submissions</h3>
+    <p style="font-size: 14px; color: #4b5563; margin-bottom: 15px;">
+        Here you can track, edit, or delete suggestions you submitted from this browser.
+    </p>
+    <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+        <input type="text" id="trackingSearchInput" placeholder="Find by Tracking ID..." style="flex: 1; min-width: 200px; margin-top: 0;">
+        <button class="primary" onclick="searchByTrackingId()" style="margin-top: 0; padding: 10px 20px;">Find Suggestion</button>
+    </div>
+    <div id="trackingSearchError" class="hidden" style="color: #ef4444; font-size: 14px; margin-bottom: 15px; font-weight: bold;"></div>
+    <div id="mySubmissionsList">
+        <!-- Rendered dynamically by script.js -->
+    </div>
+</div>
+
+</div>
+
+<!-- BOARD TAB -->
+<div id="board" class="tab hidden">
+
+<h3 id="boardTitle">Suggestions & Grievances</h3>
+<div id="boardPosts"></div>
+
+</div>
+
+<!-- ADMIN TAB -->
+<div id="admin" class="tab hidden">
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+    <h3 style="margin: 0;">Admin Dashboard</h3>
+    <div>
+        <label style="display: inline-block; margin-right: 10px; font-weight: normal; cursor: pointer;">
+            <input type="radio" name="adminFilter" value="ai" onchange="renderAdmin()"> Filtered Alerts
+        </label>
+        <label style="display: inline-block; font-weight: normal; cursor: pointer;">
+            <input type="radio" name="adminFilter" value="all" checked onchange="renderAdmin()"> All Submissions
+        </label>
+    </div>
+</div>
+
+<!-- Reports and Analytics Section -->
+<div class="card" style="border-left: 4px solid #1e40af; margin-bottom: 20px;">
+    <h4 style="margin-top: 0; color: #1e3a8a; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <span>Reports & Analytics</span>
+        <div style="display: flex; gap: 8px;">
+            <button class="support" onclick="exportCSVReport()" style="background-color: #0284c7; padding: 6px 12px; font-size: 13px;">Export Spreadsheet</button>
+            <button class="support" onclick="printPDFReport()" style="background-color: #0f766e; padding: 6px 12px; font-size: 13px;">Print/PDF Report</button>
+        </div>
+    </h4>
+    
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+        <div class="stats-card">
+            <h4 id="statTotal">0</h4>
+            <p>Total Suggestions</p>
+        </div>
+        <div class="stats-card success">
+            <h4 id="statResolved">0 (0%)</h4>
+            <p>Resolved Rate</p>
+        </div>
+        <div class="stats-card alert">
+            <h4 id="statFlagged">0</h4>
+            <p>AI Flagged Alerts</p>
+        </div>
+        <div class="stats-card">
+            <h4 id="statSupports">0</h4>
+            <p>Total Supports</p>
+        </div>
+    </div>
+
+    <!-- Category Breakdown Panel -->
+    <div style="overflow-x: auto;">
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Submissions</th>
+                    <th>Public / Private</th>
+                    <th>Resolved / Pending</th>
+                    <th>Supports (Avg)</th>
+                </tr>
+            </thead>
+            <tbody id="reportCategoryRows">
+                <!-- Populated dynamically -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="adminNotifications" style="margin-bottom: 12px; color: #334155; font-size: 14px;"></div>
+<button id="markAllReadBtn" class="support" style="background:#0f766e; margin-bottom: 12px; display:none;" onclick="markAllRead()">Mark all as read</button>
+<div id="adminPosts"></div>
+
+</div>
+
+</div>
+</div> <!-- END appContainer -->
+
+<!-- EDIT POST MODAL -->
+<div id="editModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <h3 style="margin-top: 0; color: #1e3a8a;">Edit Suggestion</h3>
+        <input type="hidden" id="editPostId">
+        
+        <label>Name (Optional)</label>
+        <input type="text" id="editName" placeholder="Enter your name (leave blank to remain anonymous)">
+        
+        <label>Category</label>
+        <select id="editCategory">
+            <option value="Finance">Finance</option>
+            <option value="Security">Security</option>
+            <option value="Academic Affairs">Academic Affairs</option>
+            <option value="Hostel">Hostel</option>
+            <option value="IT Services">IT Services</option>
+            <option value="Others">Others</option>
+        </select>
+        
+        <label>Description</label>
+        <textarea id="editDescription" placeholder="Describe your issue here..." style="height: 120px;"></textarea>
+        
+        <label>Attach Files (Optional)</label>
+        <div style="border: 2px dashed #60a5fa; border-radius: 6px; padding: 15px; text-align: center; background-color: rgba(96, 165, 250, 0.05); cursor: pointer;" onclick="document.getElementById('editFileInput').click()">
+            <input type="file" id="editFileInput" multiple style="display: none;" onchange="handleFileSelect(event, 'edit')">
+            <p style="margin: 0; color: #0284c7; font-weight: 500;">📁 Click to select files or drag and drop</p>
+            <small style="color: #64748b;">Supports images, documents (Max 5MB each)</small>
+        </div>
+        <div id="fileListEdit" style="margin-top: 10px;"></div>
+        
+        <div class="options" style="margin-top: 15px;">
+            <label>
+                <input type="checkbox" id="editPrivate"> Send Only To Admin
+            </label>
+        </div>
+        
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeEditModal()">Cancel</button>
+            <button class="primary" onclick="saveEditedPost()" style="margin-top: 0;">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- CUSTOM CONFIRMATION MODAL -->
+<div id="confirmModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 400px; border-left: 5px solid #ef4444;">
+        <h3 id="confirmTitle" style="margin-top: 0; color: #1e3a8a;">Confirm Action</h3>
+        <p id="confirmMessage" style="color: #4b5563; font-size: 14px; margin-bottom: 20px; line-height: 1.5;">Are you sure you want to proceed?</p>
+        <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeConfirmModal()" style="padding: 8px 16px;">Cancel</button>
+            <button id="confirmYesBtn" class="primary" style="margin-top: 0; background-color: #ef4444; padding: 8px 16px;">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- CUSTOM ALERT MODAL -->
+<div id="alertModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 400px; border-left: 5px solid #1e40af;">
+        <h3 id="alertTitle" style="margin-top: 0; color: #1e3a8a;">Notification</h3>
+        <p id="alertMessage" style="color: #4b5563; font-size: 14px; margin-bottom: 20px; line-height: 1.5;">Notification details</p>
+        <div class="modal-actions">
+            <button class="primary" onclick="closeAlertModal()" style="margin-top: 0; padding: 8px 16px; min-width: 80px;">OK</button>
+        </div>
+    </div>
+</div>
+
+<!-- Firebase Integration -->
+<script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js"></script>
+<script src="firebase-config.js"></script>
+<script src="script.js"></script>
+<script>
+  window.addEventListener('DOMContentLoaded', function() {
+    initializeFirebase();
+    startRealtimeSync();
+  });
+</script>
+
+</body>
+</html>

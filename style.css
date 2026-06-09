@@ -1,0 +1,559 @@
+body{
+font-family:'Segoe UI',sans-serif;
+background-image: linear-gradient(135deg, rgba(240,249,255,0.45), rgba(248,250,252,0.45)), url('logo.jpg');
+background-size: cover;
+background-position: center;
+background-repeat: no-repeat;
+background-attachment: fixed;
+margin:0;
+padding:0;
+}
+
+header{
+background-color:rgba(96,165,250,0.88);
+color:white;
+padding:15px;
+text-align:center;
+font-size:24px;
+font-weight:bold;
+position: relative;
+min-height: 55px;
+display: flex;
+align-items: center;
+justify-content: center;
+padding-right: 280px;
+}
+
+nav{
+display:flex;
+justify-content:center;
+background-color:#60a5fa;
+}
+
+nav button{
+background:none;
+border:none;
+color:white;
+padding:14px 20px;
+cursor:pointer;
+font-size:16px;
+transition:0.3s;
+}
+
+nav button:hover{
+background-color:#93c5fd;
+}
+
+/* ACTIVE BUTTON */
+nav button.active{
+background-color:#a7f3d0;
+font-weight:bold;
+border-bottom:3px solid #4ade80;
+position:relative;
+}
+
+.notification-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background-color: #ef4444;
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    border: 2px solid #60a5fa;
+}
+
+.container{
+padding:20px;
+max-width:900px;
+margin:auto;
+}
+
+.card{
+/* Adjust this alpha for stronger or softer translucency */
+
+backdrop-filter: blur(12px);
+padding:20px;
+margin-bottom:15px;
+border-radius:8px;
+box-shadow:0 4px 10px rgba(0,0,0,0.12);
+border-left:4px solid #86efac;
+}
+
+label{
+display:block;
+margin-top:10px;
+font-weight:600;
+color:#1f2937;
+}
+
+input,select,textarea{
+width:100%;
+padding:10px;
+margin-top:5px;
+border-radius:6px;
+border:1px solid rgba(209,213,219,0.8);
+background-color: rgba(255,255,255,0.85);
+}
+
+textarea{
+height:100px;
+resize:none;
+}
+
+.options{
+margin-top:15px;
+}
+
+button.primary{
+background-color:#059669;
+color:white;
+padding:10px 15px;
+border:none;
+border-radius:6px;
+cursor:pointer;
+margin-top:15px;
+transition:0.2s;
+}
+
+button.primary:hover{
+background-color:#047857;
+}
+
+button.support{
+background-color:#60a5fa;
+color:white;
+padding:6px 10px;
+border:none;
+border-radius:5px;
+cursor:pointer;
+}
+
+button.support:hover{
+background-color:#38bdf8;
+}
+
+.hidden{
+display:none !important;
+}
+
+.badge{
+background-color:#fbbf24;
+color:#92400e;
+padding:4px 8px;
+border-radius:12px;
+font-size:12px;
+margin-left:10px;
+font-weight:500;
+}
+
+/* Custom Auth Styles */
+.landing-container {
+    padding: 20px;
+}
+.role-btn {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    margin-top: 15px;
+    font-size: 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    color: white;
+    transition: 0.2s;
+}
+.student-btn {
+    background-color: #60a5fa;
+}
+.student-btn:hover {
+    background-color: #38bdf8;
+}
+.staff-btn {
+    background-color: #22c55e;
+}
+.staff-btn:hover {
+    background-color: #16a34a;
+}
+.admin-btn {
+    background-color: #93c5fd;
+}
+.admin-btn:hover {
+    background-color: #60a5fa;
+}
+
+/* Reports & Analytics Panel */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+.stats-card {
+    background: rgba(255, 255, 255, 0.85);
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    text-align: center;
+    border-bottom: 3px solid #1e40af;
+    backdrop-filter: blur(12px);
+}
+.stats-card.alert {
+    border-bottom: 3px solid #ef4444;
+}
+.stats-card.success {
+    border-bottom: 3px solid #10b981;
+}
+.stats-card h4 {
+    margin: 0;
+    font-size: 28px;
+    color: #1e3a8a;
+}
+.stats-card p {
+    margin: 5px 0 0;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+.report-table th, .report-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}
+.report-table th {
+    background: rgba(219, 234, 254, 0.8);
+    color: #1e3a8a;
+    font-weight: 600;
+}
+
+/* Edit Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.25s ease-out;
+}
+.modal-content {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 25px;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+    border-left: 5px solid #60a5fa;
+    animation: slideUp 0.25s ease-out;
+}
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.btn-secondary {
+    background-color: #94a3b8;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.btn-secondary:hover {
+    background-color: #64748b;
+}
+
+.btn-delete {
+    background-color: #ef4444;
+    color: white;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.btn-delete:hover {
+    background-color: #dc2626;
+}
+
+.btn-edit {
+    background-color: #e2e8f0;
+    color: #1e293b;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-right: 5px;
+    transition: 0.2s;
+}
+.btn-edit:hover {
+    background-color: #cbd5e1;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* MOBILE RESPONSIVENESS */
+@media (max-width: 768px) {
+    body {
+        background-attachment: scroll;
+    }
+    
+    header {
+        font-size: 18px;
+        padding: 12px;
+        padding-right: 240px;
+    }
+    
+    header button {
+        font-size: 11px;
+        padding: 4px 6px;
+    }
+    
+    #backBtn {
+        right: 120px !important;
+        padding: 5px 8px !important;
+    }
+    
+    #logoutBtn {
+        right: 8px !important;
+        padding: 5px 8px !important;
+    }
+    
+    nav {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        overflow-x: auto;
+    }
+    
+    nav button {
+        padding: 12px 12px;
+        font-size: 14px;
+        flex: 1;
+        min-width: 70px;
+    }
+    
+    #currentRoleDisplay {
+        display: none;
+    }
+    
+    .container {
+        padding: 12px;
+        max-width: 100%;
+    }
+    
+    .card {
+        padding: 15px;
+        margin-bottom: 12px;
+    }
+    
+    label {
+        font-size: 14px;
+        margin-top: 8px;
+    }
+    
+    input, select, textarea {
+        font-size: 16px;
+        padding: 10px;
+        margin-top: 4px;
+    }
+    
+    textarea {
+        height: 80px;
+    }
+    
+    button.primary, button.support, .btn-secondary, .btn-delete, .btn-edit {
+        padding: 8px 12px;
+        font-size: 13px;
+        width: 100%;
+        margin-top: 8px;
+    }
+    
+    .badge {
+        font-size: 11px;
+        padding: 3px 6px;
+        margin-left: 5px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .stats-card h4 {
+        font-size: 22px;
+    }
+    
+    .stats-card p {
+        font-size: 12px;
+    }
+    
+    .report-table th, .report-table td {
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+    
+    .modal-content {
+        width: 95%;
+        padding: 20px;
+        max-width: 100%;
+    }
+    
+    .modal-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .modal-actions button {
+        width: 100%;
+    }
+    
+    .role-btn {
+        padding: 12px;
+        font-size: 16px;
+        margin-top: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    header {
+        font-size: 16px;
+        padding: 10px;
+        padding-right: 160px;
+    }
+    
+    header button {
+        font-size: 10px;
+        padding: 4px 6px;
+    }
+    
+    #backBtn {
+        right: 80px !important;
+        padding: 4px 6px !important;
+        font-size: 10px !important;
+    }
+    
+    #logoutBtn {
+        right: 4px !important;
+        padding: 4px 6px !important;
+        font-size: 10px !important;
+    }
+    
+    nav button {
+        padding: 10px 8px;
+        font-size: 12px;
+        min-width: 60px;
+    }
+    
+    .notification-badge {
+        width: 20px;
+        height: 20px;
+        font-size: 10px;
+    }
+    
+    .container {
+        padding: 10px;
+    }
+    
+    .card {
+        padding: 12px;
+        margin-bottom: 10px;
+    }
+    
+    h2, h3, h4 {
+        font-size: 16px;
+    }
+    
+    p {
+        font-size: 14px;
+    }
+    
+    small {
+        font-size: 12px;
+    }
+    
+    input, select, textarea {
+        font-size: 14px;
+        padding: 8px;
+    }
+    
+    button.primary, button.support, .btn-secondary, .btn-delete, .btn-edit {
+        padding: 6px 10px;
+        font-size: 12px;
+        margin-top: 6px;
+    }
+    
+    .badge {
+        font-size: 10px;
+        padding: 2px 5px;
+        margin-left: 4px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    
+    .stats-card h4 {
+        font-size: 18px;
+    }
+    
+    .stats-card p {
+        font-size: 11px;
+    }
+    
+    .report-table {
+        font-size: 11px;
+    }
+    
+    .report-table th, .report-table td {
+        padding: 6px 8px;
+        font-size: 10px;
+    }
+    
+    .modal-content {
+        width: 90%;
+        padding: 15px;
+    }
+    
+    .modal-content h3 {
+        font-size: 14px;
+    }
+    
+    .landing-container {
+        padding: 15px;
+    }
+}
