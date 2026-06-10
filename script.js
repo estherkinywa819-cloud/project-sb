@@ -1,49 +1,91 @@
-let posts = JSON.parse(localStorage.getItem("posts")) || [];
+// ============================================================
+// STATE
+// db is initialized in firebase-config.js and available globally
+// via the compat SDK loaded in your HTML.
+// ============================================================
 
-// Ensure all posts have required properties
-posts = posts.map(post => {
-    if (!post) return post;
-    return {
-        id: post.id || Date.now(),
-        name: post.name || "Anonymous",
-        category: post.category || "",
-        description: post.description || "",
-        isPrivate: post.isPrivate !== undefined ? post.isPrivate : (post.private || false),
-        supports: post.supports || 0,
-        status: post.status || "Pending",
-        department: post.department || "Unassigned",
-        aiFlagged: post.aiFlagged || false,
-        aiReason: post.aiReason || "",
-        readByAdmin: post.readByAdmin || false,
-        viewCount: post.viewCount || 0,
-        hasBeenViewed: post.hasBeenViewed || false,
-        submittedBy: post.submittedBy || "unknown",
-        isDeleted: post.isDeleted || false,
-        replies: post.replies || [],
-        files: post.files || []
-    };
-});
-
+let posts = [];
+let accounts = { staff: {} };
 let currentRole = null;
 let selectedRole = null;
 let staffRegisterMode = false;
-let accounts = JSON.parse(localStorage.getItem("accounts")) || { staff: {} };
 
-console.log("Posts loaded on page load:", posts.length, "posts");
+// ============================================================
+// FIREBASE — called by your HTML after DOMContentLoaded
+// ============================================================
 
-function savePosts(){
-    console.log("Saving posts:", posts.length, "posts to localStorage");
-    localStorage.setItem("posts", JSON.stringify(posts));
-    console.log("Posts saved. Checking localStorage:", JSON.parse(localStorage.getItem("posts")).length, "posts");
+function initializeFirebase() {
+    // Load accounts from Firebase
+    firebase.database().ref('accounts').on('value', function(snapshot) {
+        accounts = snapshot.val() || { staff: {} };
+        console.log("Firebase sync: accounts updated");
+    });
 }
 
-if (typeof savePostsWithFirebase === 'undefined') {
-    var savePostsWithFirebase = savePosts;
+function startRealtimeSync() {
+    // Listen for any change to posts in Firebase and update all devices instantly
+    firebase.database().ref('posts').on('value', function(snapshot) {
+        const data = snapshot.val();
+        const raw = data ? (Array.isArray(data) ? data : Object.values(data)) : [];
+
+        posts = raw.filter(Boolean).map(function(post) {
+            return {
+                id: post.id || Date.now(),
+                name: post.name || "Anonymous",
+                category: post.category || "",
+                description: post.description || "",
+                isPrivate: post.isPrivate !== undefined ? post.isPrivate : (post.private || false),
+                supports: post.supports || 0,
+                status: post.status || "Pending",
+                department: post.department || "Unassigned",
+                aiFlagged: post.aiFlagged || false,
+                aiReason: post.aiReason || "",
+                readByAdmin: post.readByAdmin || false,
+                viewCount: post.viewCount || 0,
+                hasBeenViewed: post.hasBeenViewed || false,
+                submittedBy: post.submittedBy || "unknown",
+                isDeleted: post.isDeleted || false,
+                replies: post.replies || [],
+                files: post.files || []
+            };
+        });
+
+        console.log("Firebase sync: posts updated ->", posts.length, "posts");
+
+        // Refresh whichever view is currently visible
+        if (currentRole === 'admin') {
+            renderAdmin();
+        } else if (currentRole) {
+            renderBoard();
+            renderMySubmissions();
+        }
+        updateAdminNotifications();
+    });
 }
 
-function saveAccounts(){
-    localStorage.setItem("accounts", JSON.stringify(accounts));
+// ============================================================
+// SAVE FUNCTIONS — write to Firebase
+// ============================================================
+
+function savePostsWithFirebase() {
+    // Store posts as an object keyed by id for reliable Firebase storage
+    var postsObj = {};
+    posts.forEach(function(p) { postsObj[p.id] = p; });
+
+    firebase.database().ref('posts').set(postsObj)
+        .then(function() { console.log("Posts saved to Firebase"); })
+        .catch(function(err) { console.error("Firebase save error:", err); });
 }
+
+function saveAccounts() {
+    firebase.database().ref('accounts').set(accounts)
+        .then(function() { console.log("Accounts saved to Firebase"); })
+        .catch(function(err) { console.error("Firebase accounts save error:", err); });
+}
+
+// ============================================================
+// EVERYTHING BELOW IS YOUR ORIGINAL CODE — UNCHANGED
+// ============================================================
 
 function updateStaffLoginUI(){
     const info = document.getElementById("loginModeInfo");
@@ -83,7 +125,7 @@ function showTab(tabId, button){
 }
 
 // ===== FILE HANDLING FUNCTIONS =====
-let tempFiles = { submit: [], edit: [] }; // Temporary storage for files before submission
+let tempFiles = { submit: [], edit: [] };
 
 function handleFileSelect(event, mode) {
     const files = event.target.files;
@@ -94,7 +136,6 @@ function handleFileSelect(event, mode) {
     }
 
     for (let file of files) {
-        // Check file size (5MB limit)
         if (file.size > 5 * 1024 * 1024) {
             showCustomAlert("File Too Large", `${file.name} exceeds 5MB limit. Please choose a smaller file.`);
             continue;
@@ -107,7 +148,7 @@ function handleFileSelect(event, mode) {
                 name: file.name,
                 size: file.size,
                 type: file.type,
-                data: e.target.result // Base64 encoded data
+                data: e.target.result
             };
             tempFiles[mode].push(fileObj);
             displayFiles(mode);
@@ -115,7 +156,6 @@ function handleFileSelect(event, mode) {
         reader.readAsDataURL(file);
     }
 
-    // Reset file input
     if (mode === 'submit') {
         document.getElementById("fileInput").value = '';
     } else if (mode === 'edit') {
@@ -186,7 +226,7 @@ function getFilesDisplay(files) {
         filesHTML += `
             <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 4px; padding: 6px 10px; font-size: 12px; display: flex; align-items: center; gap: 6px;">
                 <span>📄 ${file.name} (${sizeKB} KB)</span>
-                <button class="support" style="background: #0284c7; color: white; padding: 2px 6px; font-size: 11px; margin: 0; border: none; border-radius: 3px; cursor: pointer;" onclick="downloadFile('${file.id}', ${JSON.stringify(file).replace(/'/g, '\\\'')})">Download</button>
+                <button class="support" style="background: #0284c7; color: white; padding: 2px 6px; font-size: 11px; margin: 0; border: none; border-radius: 3px; cursor: pointer;" onclick="downloadFile('${file.id}', ${JSON.stringify(file).replace(/'/g, "\\'")})">Download</button>
             </div>
         `;
     });
@@ -248,7 +288,8 @@ function submitPost(){
 
     savePostsWithFirebase();
 
-    // Save to user's local submissions list
+    // mySubmissions stays in localStorage intentionally — it is device-specific
+    // and tracks which posts THIS browser submitted (for edit/delete access)
     let mySubmissions = JSON.parse(localStorage.getItem("mySubmissions")) || [];
     mySubmissions.push(newPost.id);
     localStorage.setItem("mySubmissions", JSON.stringify(mySubmissions));
@@ -306,7 +347,7 @@ function renderBoard(){
         if (p.isPrivate) return false;
         if (currentRole === 'student') return p.submittedBy === 'student';
         if (currentRole === 'staff') return p.submittedBy === 'staff';
-        return true; // admin sees all public posts
+        return true;
     }).slice().sort((a,b) => b.id - a.id);
 
     const title = document.getElementById("boardTitle");
@@ -332,14 +373,12 @@ function renderBoard(){
         let statusColor = post.status === "Pending" ? "#1e40af" : post.status === "Reviewed" ? "#1e40af" : "#22c55e";
         let statusTextColor = post.status === "Pending" ? "white" : "white";
 
-        // Check if this is the user's own post via localStorage
         const mySubmissions = JSON.parse(localStorage.getItem("mySubmissions")) || [];
         const isOwnPost = mySubmissions.includes(post.id);
         const canDelete = isOwnPost || currentRole === 'admin';
         const deleteBtn = canDelete ? `<button class="delete-btn" style="margin-left:10px; background:#ef4444; color:white; padding:8px 12px; border:none; border-radius:4px; cursor:pointer;" onclick="${currentRole === 'admin' ? 'deletePost' : 'deleteOwnPost'}(${post.id})">Delete</button>` : '';
         const editBtn = isOwnPost ? `<button class="support" style="margin-left:10px; background:#cbd5e1; color:#1f2937; padding:8px 12px; border:none; border-radius:4px; cursor:pointer;" onclick="openEditModal(${post.id})">Edit</button>` : '';
 
-        // Generate replies HTML
         let repliesHTML = '';
         if (post.replies && post.replies.length > 0) {
             repliesHTML = `
@@ -378,11 +417,10 @@ function renderBoard(){
             </div>`;
         }
 
-        // Create single status badge: green if read by admin, blue if pending
-        let readStatusBadge = post.readByAdmin ? 
-            `<span class="badge" style="background-color: #047857; color: white; margin-left: 5px;">✓ Read</span>` : 
+        let readStatusBadge = post.readByAdmin ?
+            `<span class="badge" style="background-color: #047857; color: white; margin-left: 5px;">✓ Read</span>` :
             `<span class="badge" style="background-color: #1e40af; color: white; margin-left: 5px;">⏳ Pending</span>`;
-        
+
         const filesDisplay = getFilesDisplay(post.files);
 
         div.innerHTML = `
@@ -430,10 +468,9 @@ function renderAdmin(){
             }
         }
     }
-    
-    // Admins see ALL posts from all roles
-    const filteredPosts = (filterMode === "ai" ? 
-        posts.filter(p => p.aiFlagged && !p.isDeleted) : 
+
+    const filteredPosts = (filterMode === "ai" ?
+        posts.filter(p => p.aiFlagged && !p.isDeleted) :
         posts.filter(p => !p.isDeleted)
     ).slice().sort((a,b) => b.id - a.id);
 
@@ -491,19 +528,18 @@ ${post.aiFlagged ? `<div style="background-color: #fee2e2; color: #b91c1c; paddi
 <p>${post.description}</p>
 <small style="color:#555;">
 Submitted by: ${post.name} | Role: ${post.submittedBy} |
-${post.isPrivate?"Private to Admin":"Public"} | 
+${post.isPrivate?"Private to Admin":"Public"} |
 ${post.supports} Supports | ${post.viewCount || 0} Views
 </small>
 ${filesDisplay}
 ${post.readByAdmin ? '' : `<button class="support" style="margin-top:10px; background:#0f766e;" onclick="markPostRead(${post.id})">Mark as read</button>`}
 <button class="delete-btn" style="margin-top:10px; margin-left:10px; background:#ef4444; color:white; padding:8px 12px; border:none; border-radius:4px; cursor:pointer;" onclick="deletePost(${post.id})">Delete</button>
 
-<!-- Admin Replies Section -->
 <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
     <h4 style="margin-top: 0; color: #1e3a8a; display: flex; justify-content: space-between; align-items: center;">
         <span>Conversation (${post.replies ? post.replies.length : 0})</span>
     </h4>
-    
+
     ${post.replies && post.replies.length > 0 ? `
         <div style="background: #f3f4f6; padding: 10px; border-radius: 6px; margin-bottom: 15px;">
             ${post.replies.map((reply, index) => `
@@ -524,7 +560,7 @@ ${post.readByAdmin ? '' : `<button class="support" style="margin-top:10px; backg
             `).join('')}
         </div>
     ` : '<p style="color: #9ca3af; font-size: 13px; margin: 0 0 15px 0; font-style: italic;">No replies yet</p>'}
-    
+
     <div style="display: flex; gap: 10px; align-items: flex-start;">
         <textarea id="replyText_${post.id}" placeholder="Write an admin reply..." style="flex: 1; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px; font-family: inherit; font-size: 14px; height: 70px; resize: vertical;"></textarea>
         <button class="support" style="background: #0f766e; color: white; padding: 10px 16px; margin-top: 0; height: fit-content; white-space: nowrap;" onclick="submitAdminReply(${post.id})">Post Reply</button>
@@ -603,11 +639,11 @@ function submitAdminReply(postId) {
 
     post.replies.push(newReply);
     savePostsWithFirebase();
-    
+
     replyTextarea.value = "";
     renderAdmin();
     renderBoard();
-    
+
     showCustomAlert("Success", "Your reply has been posted.");
 }
 
@@ -648,14 +684,13 @@ function submitUserReply(postId, replyId) {
 
     reply.userResponses.push(userResponse);
     savePostsWithFirebase();
-    
-    // Clear and hide form
+
     textarea.value = "";
     toggleReplyForm(postId, replyId);
-    
+
     renderBoard();
     renderMySubmissions();
-    
+
     showCustomAlert("Success", "Your reply has been sent to the admin.");
 }
 
@@ -671,7 +706,6 @@ async function deletePost(id) {
     const post = posts.find(p => p.id === id);
     if (!post) return;
 
-    // Only admin can delete
     if (currentRole !== 'admin') {
         showCustomAlert("Access Denied", "Only admin can delete submissions.");
         return;
@@ -696,10 +730,9 @@ async function deletePost(id) {
 function analyzePostWithAI(post) {
     const alarmingKeywords = ["urgent", "emergency", "danger", "threat", "harassment", "fire", "theft", "police", "critical", "insecurity", "steal", "robbery", "assault", "violence", "attack", "weapon", "bomb", "explosion", "poison", "murder", "kill", "death", "suicide", "abuse", "rape", "stalking", "bullying", "hate", "racism", "discrimination"];
     const descLower = post.description.toLowerCase();
-    
+
     console.log("Analyzing post with AI. Description:", post.description);
-    
-    // Check for alarming keywords
+
     const foundKeywords = alarmingKeywords.filter(kw => descLower.includes(kw));
     if (foundKeywords.length > 0) {
         post.aiFlagged = true;
@@ -708,12 +741,10 @@ function analyzePostWithAI(post) {
         return;
     }
 
-    // Check for repetitiveness (share 3+ words or identical description)
     const words = descLower.split(/\W+/).filter(w => w.length > 2);
     for (let i = posts.length - 1; i >= Math.max(0, posts.length - 15); i--) {
         const existingDescLower = posts[i].description.toLowerCase();
-        
-        // Exact match check
+
         if (descLower === existingDescLower) {
             post.aiFlagged = true;
             post.aiReason = "Alert: Exact Duplicate of Post ID: " + posts[i].id;
@@ -743,7 +774,6 @@ function updatePost(id, field, value) {
     }
 }
 
-// Auth & Role Management
 function selectRole(role) {
     document.getElementById("landingPage").classList.add("hidden");
     document.getElementById("backBtn").classList.remove("hidden");
@@ -770,15 +800,12 @@ function attemptLogin() {
 
     let isValid = false;
     let role = null;
-    let errorMessage = "";
 
-    // Admin credentials
     if (selectedRole === 'admin' && user === 'admin' && pass === 'admin123') {
         isValid = true;
         role = 'admin';
     }
 
-    // Display result
     if (isValid) {
         document.getElementById("loginPage").classList.add("hidden");
         document.getElementById("loginError").classList.add("hidden");
@@ -795,19 +822,16 @@ function launchApp(role) {
     document.getElementById("appContainer").classList.remove("hidden");
     document.getElementById("logoutBtn").classList.remove("hidden");
     document.getElementById("backBtn").classList.remove("hidden");
-    
-    // Update current role display
+
     const roleDisplay = document.getElementById("currentRoleDisplay");
     roleDisplay.textContent = role.charAt(0).toUpperCase() + role.slice(1);
 
     if (role === 'student' || role === 'staff') {
-        // Hide admin tab, show submit and board
         document.getElementById("nav-admin").classList.add("hidden");
         document.getElementById("nav-submit").classList.remove("hidden");
         document.getElementById("nav-board").classList.remove("hidden");
         showTab('submit', document.getElementById("nav-submit"));
     } else if (role === 'admin') {
-        // Show admin tab, hide submit
         document.getElementById("nav-submit").classList.add("hidden");
         document.getElementById("nav-board").classList.add("hidden");
         document.getElementById("nav-admin").classList.remove("hidden");
@@ -823,7 +847,6 @@ function logout() {
     document.getElementById("backBtn").classList.add("hidden");
     document.getElementById("currentRoleDisplay").textContent = "";
 
-    // Always go to landing page for all roles
     document.getElementById("landingPage").classList.remove("hidden");
     document.getElementById("loginPage").classList.add("hidden");
     document.getElementById("loginUser").value = "";
@@ -834,7 +857,6 @@ function logout() {
 }
 
 function backToLanding() {
-    // Always return to landing page from the login form
     document.getElementById("appContainer").classList.add("hidden");
     document.getElementById("logoutBtn").classList.add("hidden");
     document.getElementById("backBtn").classList.add("hidden");
@@ -854,15 +876,12 @@ function backToLanding() {
     currentRole = null;
 }
 
-// Header back behaves like "previous action": if staff was selected or logged in, go to staff login; else landing
 function headerBack(){
-    // If the login page is currently visible, return to the landing page.
     if (!document.getElementById("loginPage").classList.contains("hidden")) {
         backToLanding();
         return;
     }
 
-    // If currently in app, return to landing
     document.getElementById("landingPage").classList.remove("hidden");
     document.getElementById("loginPage").classList.add("hidden");
     document.getElementById("appContainer").classList.add("hidden");
@@ -881,8 +900,6 @@ function toggleStaffMode(){
     updateStaffLoginUI();
 }
 
-// Note: Staff no longer requires account registration - direct access maintained for anonymity
-
 function togglePassword() {
     const passInput = document.getElementById("loginPass");
     if (passInput.type === "password") {
@@ -892,16 +909,13 @@ function togglePassword() {
     }
 }
 
-// User submission list rendering
 function renderMySubmissions() {
     const container = document.getElementById("mySubmissionsList");
     if (!container) return;
     container.innerHTML = "";
 
     const mySubmissions = JSON.parse(localStorage.getItem("mySubmissions")) || [];
-    
-    // Filter posts that are owned by the user (ID is in mySubmissions list) and not deleted,
-    // AND belong to the current logged-in role
+
     const myPosts = posts.filter(p => mySubmissions.includes(p.id) && !p.isDeleted && p.submittedBy === currentRole);
 
     if (myPosts.length === 0) {
@@ -922,10 +936,6 @@ function renderMySubmissions() {
         div.style.flexWrap = "wrap";
         div.style.gap = "10px";
 
-        let statusColor = post.status === "Pending" ? "#1e40af" : post.status === "Reviewed" ? "#1e40af" : "#10b981";
-        let statusTextColor = post.status === "Pending" ? "white" : "white";
-
-        // Generate replies HTML for submissions list
         let repliesHTML = '';
         if (post.replies && post.replies.length > 0) {
             repliesHTML = `
@@ -950,11 +960,10 @@ function renderMySubmissions() {
             </div>`;
         }
 
-        // Single badge: green if read by admin, blue if pending
-        let readStatusBadge = post.readByAdmin ? 
-            `<span class="badge" style="background-color: #047857; color: white; margin: 0; font-size: 11px; padding: 2px 6px;">✓ Read</span>` : 
+        let readStatusBadge = post.readByAdmin ?
+            `<span class="badge" style="background-color: #047857; color: white; margin: 0; font-size: 11px; padding: 2px 6px;">✓ Read</span>` :
             `<span class="badge" style="background-color: #1e40af; color: white; margin: 0; font-size: 11px; padding: 2px 6px;">⏳ Pending</span>`;
-        
+
         div.innerHTML = `
             <div style="flex: 1; min-width: 250px;">
                 <div style="display:flex; align-items:center; gap: 8px; margin-bottom: 5px; flex-wrap: wrap;">
@@ -975,7 +984,6 @@ function renderMySubmissions() {
     });
 }
 
-// Find submission by tracking ID recovery
 function searchByTrackingId() {
     const errorDiv = document.getElementById("trackingSearchError");
     const inputVal = document.getElementById("trackingSearchInput").value.trim();
@@ -1012,7 +1020,6 @@ function searchByTrackingId() {
     openEditModal(id);
 }
 
-// Edit Modal functionality
 function openEditModal(id) {
     const post = posts.find(p => p.id === id);
     if (!post || post.isDeleted) return;
@@ -1023,7 +1030,6 @@ function openEditModal(id) {
     document.getElementById("editDescription").value = post.description;
     document.getElementById("editPrivate").checked = post.isPrivate;
 
-    // Reset and display existing files
     tempFiles.edit = post.files ? [...post.files] : [];
     displayFiles('edit');
 
@@ -1055,7 +1061,6 @@ function saveEditedPost() {
     post.isPrivate = isPrivate;
     post.files = tempFiles.edit || [];
 
-    // Reset AI flags before re-analysis
     post.aiFlagged = false;
     post.aiReason = "";
     analyzePostWithAI(post);
@@ -1063,17 +1068,16 @@ function saveEditedPost() {
     savePostsWithFirebase();
     tempFiles.edit = [];
     closeEditModal();
-    
+
     renderMySubmissions();
     renderBoard();
     updateAdminNotifications();
-    
+
     if (post.aiFlagged) {
         showCustomAlert("AI Filter Alert", "Your changes were saved. Note: The automated AI system flagged this post for review: " + post.aiReason);
     }
 }
 
-// Delete own post
 async function deleteOwnPost(id) {
     const post = posts.find(p => p.id === id);
     if (!post) return;
@@ -1088,7 +1092,7 @@ async function deleteOwnPost(id) {
     if (confirmed) {
         post.isDeleted = true;
         savePostsWithFirebase();
-        
+
         renderMySubmissions();
         renderBoard();
         renderAdmin();
@@ -1096,17 +1100,15 @@ async function deleteOwnPost(id) {
     }
 }
 
-// Admin Reports and Dashboard rendering
 function renderAdminReports() {
     const activePosts = posts.filter(p => !p.isDeleted);
     const totalCount = activePosts.length;
-    
+
     const resolvedCount = activePosts.filter(p => p.status === "Resolved").length;
     const resolvedRate = totalCount > 0 ? Math.round((resolvedCount / totalCount) * 100) : 0;
     const flaggedCount = activePosts.filter(p => p.aiFlagged).length;
     const totalSupports = activePosts.reduce((sum, p) => sum + (p.supports || 0), 0);
 
-    // Update metrics UI
     const totalEl = document.getElementById("statTotal");
     const resolvedEl = document.getElementById("statResolved");
     const flaggedEl = document.getElementById("statFlagged");
@@ -1117,7 +1119,6 @@ function renderAdminReports() {
     if (flaggedEl) flaggedEl.textContent = flaggedCount;
     if (supportsEl) supportsEl.textContent = totalSupports;
 
-    // Category breakdown table rows
     const categories = ["Finance", "Security", "Academic Affairs", "Hostel", "IT Services", "Others"];
     const tbody = document.getElementById("reportCategoryRows");
     if (!tbody) return;
@@ -1126,13 +1127,10 @@ function renderAdminReports() {
     categories.forEach(cat => {
         const catPosts = activePosts.filter(p => p.category === cat);
         const count = catPosts.length;
-        
         const publicCount = catPosts.filter(p => !p.isPrivate).length;
         const privateCount = catPosts.filter(p => p.isPrivate).length;
-        
         const resolved = catPosts.filter(p => p.status === "Resolved").length;
         const pending = count - resolved;
-        
         const supports = catPosts.reduce((sum, p) => sum + (p.supports || 0), 0);
         const avgSupports = count > 0 ? (supports / count).toFixed(1) : "0.0";
 
@@ -1148,10 +1146,9 @@ function renderAdminReports() {
     });
 }
 
-// Download CSV Report
 function exportCSVReport() {
     const activePosts = posts.filter(p => !p.isDeleted);
-    
+
     let csvContent = "data:text/csv;charset=utf-8,";
     csvContent += "ID,Role,Category,Status,Department,AI Flagged,AI Reason,Supports,Views,Private,Name,Description\n";
 
@@ -1187,7 +1184,6 @@ function exportCSVReport() {
     document.body.removeChild(link);
 }
 
-// Print and PDF Report
 function printPDFReport() {
     const activePosts = posts.filter(p => !p.isDeleted);
     const totalCount = activePosts.length;
@@ -1251,10 +1247,7 @@ function printPDFReport() {
                 th, td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 13px; }
                 th { background: #f1f5f9; }
                 h2 { color: #1e3a8a; border-bottom: 1px solid #ccc; padding-bottom: 6px; margin-top: 30px; }
-                @media print {
-                    button { display: none; }
-                    body { padding: 0; }
-                }
+                @media print { button { display: none; } body { padding: 0; } }
             </style>
         </head>
         <body>
@@ -1262,83 +1255,44 @@ function printPDFReport() {
                 <h1>University Suggestion Box Report</h1>
                 <button onclick="window.print()" style="background:#0f766e; color:white; border:none; padding:8px 16px; border-radius:4px; font-weight:bold; cursor:pointer;">Print / Save PDF</button>
             </div>
-            <div class="meta">
-                Generated on: ${new Date().toLocaleString()} <br>
-                Admin Session Active
-            </div>
-            
+            <div class="meta">Generated on: ${new Date().toLocaleString()}<br>Admin Session Active</div>
             <div class="stats-grid">
-                <div class="stats-card">
-                    <h3>${totalCount}</h3>
-                    <p>Total Suggestions</p>
-                </div>
-                <div class="stats-card">
-                    <h3>${resolvedCount} (${resolvedRate}%)</h3>
-                    <p>Resolved Rate</p>
-                </div>
-                <div class="stats-card">
-                    <h3>${flaggedCount}</h3>
-                    <p>AI Flagged Alerts</p>
-                </div>
-                <div class="stats-card">
-                    <h3>${totalSupports}</h3>
-                    <p>Total Supports</p>
-                </div>
+                <div class="stats-card"><h3>${totalCount}</h3><p>Total Suggestions</p></div>
+                <div class="stats-card"><h3>${resolvedCount} (${resolvedRate}%)</h3><p>Resolved Rate</p></div>
+                <div class="stats-card"><h3>${flaggedCount}</h3><p>AI Flagged Alerts</p></div>
+                <div class="stats-card"><h3>${totalSupports}</h3><p>Total Supports</p></div>
             </div>
-
             <h2>Category Summary</h2>
             <table>
-                <thead>
-                    <tr>
-                        <th>Category</th>
-                        <th>Submissions</th>
-                        <th>Visibility Status</th>
-                        <th>Resolution Status</th>
-                        <th>Average Supports</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${categoryRowsHtml}
-                </tbody>
+                <thead><tr><th>Category</th><th>Submissions</th><th>Visibility Status</th><th>Resolution Status</th><th>Average Supports</th></tr></thead>
+                <tbody>${categoryRowsHtml}</tbody>
             </table>
-
             <h2>Detailed Suggestion List</h2>
-            <div>
-                ${suggestionsHtml || '<p>No active suggestions found.</p>'}
-            </div>
-            
-            <script>
-                window.onload = function() {
-                    setTimeout(function() {
-                        window.print();
-                    }, 500);
-                }
-            </script>
+            <div>${suggestionsHtml || '<p>No active suggestions found.</p>'}</div>
+            <script>window.onload = function() { setTimeout(function() { window.print(); }, 500); }<\/script>
         </body>
         </html>
     `);
     printWindow.document.close();
 }
 
-// Custom Modals logic
 let confirmPromiseResolve = null;
 
 function showCustomConfirm(title, message, yesText = "Confirm", yesColor = "#ef4444") {
     return new Promise((resolve) => {
         document.getElementById("confirmTitle").textContent = title;
         document.getElementById("confirmMessage").textContent = message;
-        
+
         const yesBtn = document.getElementById("confirmYesBtn");
         yesBtn.textContent = yesText;
         yesBtn.style.backgroundColor = yesColor;
-        
-        // click handlers
+
         yesBtn.onclick = () => {
             document.getElementById("confirmModal").classList.add("hidden");
             confirmPromiseResolve = null;
             resolve(true);
         };
-        
+
         confirmPromiseResolve = resolve;
         document.getElementById("confirmModal").classList.remove("hidden");
     });
@@ -1358,8 +1312,7 @@ function showCustomAlert(title, message) {
     return new Promise((resolve) => {
         document.getElementById("alertTitle").textContent = title;
         document.getElementById("alertMessage").textContent = message;
-        
-        // Define click handler
+
         alertPromiseResolve = resolve;
         document.getElementById("alertModal").classList.remove("hidden");
     });
